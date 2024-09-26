@@ -1,0 +1,4 @@
+requests==2.31.0          # For making HTTP requests to the API
+Pillow==9.5.0             # For handling image processing tasks
+torch==2.0.1              # For handling tensor operations and image data
+torchvision==0.15.2       # For image transformation tools like ToPILImage
