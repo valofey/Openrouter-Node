@@ -1,0 +1,15 @@
+[project]
+name = "openrouter-node"
+description = "This is a node to use OpenRouter API from within ComfyUI. It supports both prompt and image+prompt requests (for multimodal LLMs)."
+version = "1.0.0"
+license = {file = "LICENSE"}
+dependencies = ["requests==2.31.0          # For making HTTP requests to the API", "Pillow==9.5.0             # For handling image processing tasks", "torch==2.0.1              # For handling tensor operations and image data", "torchvision==0.15.2       # For image transformation tools like ToPILImage"]
+
+[project.urls]
+Repository = "https://github.com/valofey/Openrouter-Node"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "Openrouter-Node"
+Icon = ""
