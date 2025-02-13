@@ -4,6 +4,7 @@ import requests
 from PIL import Image
 import io
 import torch
+import re
 from torchvision.transforms import ToPILImage
 
 class OpenrouterNode:
@@ -26,18 +27,25 @@ class OpenrouterNode:
                 }),
                 "prompt": ("STRING", {
                     "multiline": True,
-                    "default": "A world without prompts"
+                    "default": ""
                 }),
-                "image_input": ("IMAGE", {
-                    "optional": True
+                "system_prompt": ("STRING", {
+                    "multiline": True,
+                    "default": "",
                 }),
                 "temperature": ("FLOAT", {
-                    "default": 1.0,
+                    "default": 0.7,
                     "min": 0.0,
                     "max": 1.0,
                     "step": 0.01,
-                    "round": 2
+                    "display_round": 2
                 }),
+                "trim_think": ("BOOLEAN", {
+                    "default": True,
+                }),
+            },
+            "optional": {
+                "image_input": ("IMAGE",)
             }
         }
 
@@ -45,15 +53,31 @@ class OpenrouterNode:
     FUNCTION = "get_completion"
     CATEGORY = "OpenRouter"
 
-    def get_completion(self, base_url, model, api_key, prompt, image_input, temperature):
+    def remove_think_tags(self, text):
+        # Pattern to match <think>...</think> tags and their content
+        pattern = r'<think>.*?</think>'
+        # Remove the tags and their content using regex
+        return re.sub(pattern, '', text, flags=re.DOTALL)
+
+    def get_completion(self, base_url, model, api_key, prompt, system_prompt, temperature, trim_think, image_input=None):
         try:
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
 
-            # Initialize messages with proper structure
-            messages = [{
+            # Initialize messages list
+            messages = []
+            
+            # Add system message if system_prompt is provided and not empty
+            if system_prompt and system_prompt.strip():
+                messages.append({
+                    "role": "system",
+                    "content": system_prompt.strip()
+                })
+
+            # Add user message with content as a list
+            user_message = {
                 "role": "user",
                 "content": [
                     {
@@ -61,7 +85,7 @@ class OpenrouterNode:
                         "text": prompt
                     }
                 ]
-            }]
+            }
 
             if image_input is not None:
                 if isinstance(image_input, torch.Tensor):
@@ -101,7 +125,10 @@ class OpenrouterNode:
                 }
                 
                 # Append the image message to the content list
-                messages[0]["content"].append(image_message)
+                user_message["content"].append(image_message)
+
+            # Add the user message to messages list
+            messages.append(user_message)
 
             body = {
                 "model": model,
@@ -116,6 +143,11 @@ class OpenrouterNode:
 
             if "choices" in response_json and len(response_json["choices"]) > 0:
                 assistant_message = response_json["choices"][0].get("message", {}).get("content", "")
+                
+                # If trim_think is enabled, remove think tags
+                if trim_think:
+                    assistant_message = self.remove_think_tags(assistant_message)
+                
                 return (assistant_message,)
             else:
                 return ("No response from the model.",)
